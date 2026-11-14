@@ -184,33 +184,27 @@ footer { color: var(--soft); font-size: 13px; text-align: center; margin-top: 22
   </section>
 
   <!-- 3 趣味や好み -->
-  <section class="step" data-title="趣味や好みの話">
-    <h1>趣味や好みの話を、どうするか</h1>
-    <p class="why">好きなもの、はまっていること、最近の出来事など、おしゃべりの中身にあたる部分です。3つから選んでください。</p>
-    <div class="radios" role="radiogroup" aria-label="趣味や好みの話">
-      <label><input type="radio" name="imode" value="おまかせ"><span><b>Museにおまかせ</b><small>Museが覚えているあなたの趣味や好みから、自由に話します。伝えたくない話題だけ、下に書きます。会話がいちばん弾みます。</small></span></label>
-      <div class="sub" id="sub-おまかせ">
-        <label class="f" for="avoid" style="margin-top:4px">伝えたくない話題（1行に1つ）</label>
-        <div class="hint">空でもかまいません。例：恋愛の話／お金の話／人に言っていない趣味。<b>作品名や店の名前など、具体的な言葉</b>も書いておくと、機械が確実に止めます。</div>
-        <textarea id="avoid"></textarea>
-        <div class="risk"><b>おまかせで気をつけること</b>
-          <ul>
-            <li>Museが覚えていることから話すので、あなたが思っていなかった話が出ることがあります。</li>
-            <li>「話題」を避けるのはMuseの心がけに頼る部分で、機械では止めきれません。機械が確実に止められるのは、ここに書いた言葉そのものです。</li>
-            <li>地元のチーム、通っている店、学校の行事などの話から、住んでいる場所や学校が分かることがあります。</li>
-          </ul>
-        </div>
-      </div>
-      <label><input type="radio" name="imode" value="書いたことだけ"><span><b>書いたことだけ</b><small>ここに書いた趣味や好みだけを話します。それ以外の、Museが覚えている言葉は機械が止めます。機械の守りがしっかり効く選び方です。</small></span></label>
-      <div class="sub" id="sub-書いたことだけ">
-        <label class="f" for="interests" style="margin-top:4px">話してよい趣味や好み（1行に1つ）</label>
-        <div class="hint">例：散歩／お茶／昔のロボットアニメ</div>
-        <textarea id="interests"></textarea>
-        <div class="err" data-for="interests"></div>
-      </div>
-      <label><input type="radio" name="imode" value="話さない"><span><b>話さない</b><small>趣味や好みの話はしません。あいさつと、相手の話を聞くことが中心になります。</small></span></label>
+  <section class="step" data-title="趣味と近況">
+    <h1>趣味の話と、近況の話</h1>
+    <p class="why">おしゃべりの中身にあたる部分です。どちらも「あなたが良いと言ったことだけ」を話します。</p>
+
+    <label class="f" for="interests">話してよい趣味や好み（1行に1つ）</label>
+    <div class="hint">書いたものだけを話します。空なら、趣味や好みの話はしません。例：散歩／お茶／昔のロボットアニメ</div>
+    <textarea id="interests"></textarea>
+    <div class="err" data-for="interests"></div>
+    <div class="risk"><b>趣味で気をつけること</b>　地元のチーム、通っている教室、めずらしい趣味は、地域や年代と合わさると、あなたが誰か分かる手がかりになります。</div>
+
+    <h2>近況や、最近の出来事は？</h2>
+    <p>ここには書きません。<b>出かける前に、Museが「今日はこの話を持って行っていい？」と一覧を見せます。</b>あなたが「いいよ」と言った話だけを持って行きます。</p>
+    <div class="note">
+      <b>近況の話は、こう言いかえて持って行きます</b>
+      <ul class="plainlist" style="margin-bottom:0">
+        <li>お店や施設は、<b>どこにでもある名前まで</b>。「ファミレスによく行く」は持って行けますが、「◯◯店」「◯◯駅」のように場所が分かる名前は持って行けません。</li>
+        <li><b>これからの予定は話しません。</b>「来週◯◯へ行く」ではなく「◯◯に行きたがっている」と言いかえます。</li>
+        <li>日にちや時刻、「毎週◯曜」のような決まった行動は話しません。</li>
+      </ul>
     </div>
-    <div class="err" data-for="imode"></div>
+    <div class="risk"><b>近況で気をつけること</b>　いつ・どこにいるかが分かると、待ちぶせや留守をねらわれるおそれがあります。Museが見せる一覧に、場所や日にちが分かる話が残っていたら、「それは外して」と言ってください。</div>
   </section>
 
   <!-- 3 テーマと話し方 -->
@@ -324,9 +318,8 @@ footer { color: var(--soft); font-size: 13px; text-align: center; margin-top: 22
     syncSubs();
   }
   function syncSubs() {
-    var rg = radio("region"), im = radio("imode");
+    var rg = radio("region");
     ["country", "area", "pref"].forEach(function (k) { $("sub-" + k).classList.toggle("on", rg === k); });
-    ["おまかせ", "書いたことだけ"].forEach(function (k) { $("sub-" + k).classList.toggle("on", im === k); });
   }
   Array.prototype.forEach.call(document.querySelectorAll('input[type=radio]'), function (r) {
     r.addEventListener("change", function () { syncSubs(); fieldErr(r.name, []); });
@@ -454,12 +447,8 @@ footer { color: var(--soft); font-size: 13px; text-align: center; margin-top: 22
       "## 話してよいこと"];
     if (regionGet()) L.push("- 住んでいる地域: " + regionGet());
     itemEls().forEach(function (d) { var g = d._get(); if (g) L.push("- " + g[0] + ": " + g[1]); });
-    var im = radio("imode") || "話さない";
-    L.push("## 趣味や好みの話"); L.push("- 決め方: " + im);
     L.push("## 話してよい趣味や好み");
-    if (im === "書いたことだけ") lines("interests").forEach(function (w) { L.push("- " + w); });
-    L.push("## 伝えたくない話題");
-    if (im === "おまかせ") lines("avoid").forEach(function (w) { L.push("- " + w); });
+    lines("interests").forEach(function (w) { L.push("- " + w); });
     L.push("## 今回のテーマ"); var t = freeText($("theme").value); if (t) L.push(t);
     L.push("## 話し方"); t = freeText($("style").value); if (t) L.push(t);
     L.push("## ものまね用メモ"); t = freeText($("mimic").value); if (t) L.push(t);
@@ -473,7 +462,6 @@ footer { color: var(--soft); font-size: 13px; text-align: center; margin-top: 22
     if (!keyText($("house").value)) out.push("「おうちの呼び名」が空です。");
     if (!keyText($("muse").value)) out.push("「Museの名前」が空です。");
     if (radio("region") && !regionGet()) out.push("「住んでいる地域」が選びかけです。");
-    if (!radio("imode")) out.push("「趣味や好みの話」をどうするか、まだ選ばれていません。");
     var ok = CHECKED.map(checkField).every(Boolean);
     var ok2 = itemEls().map(function (d) { return d._check(); }).every(Boolean);
     if (!ok || !ok2) out.push("書けない文字（長い数字や@）が残っています。もどって直してください。");
@@ -490,9 +478,9 @@ footer { color: var(--soft); font-size: 13px; text-align: center; margin-top: 22
     }
     er.classList.remove("on");
     var sec = "", buf = { "今回のテーマ": [], "話し方": [], "ものまね用メモ": [], "絶対に出さない言葉": [],
-      "話してよい趣味や好み": [], "伝えたくない話題": [] };
-    var LISTS = ["絶対に出さない言葉", "話してよい趣味や好み", "伝えたくない話題"];
-    regionSet(""); setRadio("imode", "話さない");
+      "話してよい趣味や好み": [] };
+    var LISTS = ["絶対に出さない言葉", "話してよい趣味や好み"];
+    regionSet("");
     itemEls().forEach(function (d) { d.parentNode.removeChild(d); });
     PRESET.forEach(function (p) { addItem(p.k, p.hint, p.options, false, p.risk); });
     txt.slice(a + START.length, b).split(/\r?\n/).forEach(function (line) {
@@ -502,8 +490,6 @@ footer { color: var(--soft); font-size: 13px; text-align: center; margin-top: 22
       if (sec === "基本" && kv) {
         if (kv[1] === "世帯表示名") $("house").value = kv[2];
         if (kv[1] === "Museの名前") $("muse").value = kv[2];
-      } else if (sec === "趣味や好みの話" && kv) {
-        if (kv[1] === "決め方") setRadio("imode", ["おまかせ", "書いたことだけ"].indexOf(kv[2]) >= 0 ? kv[2] : "話さない");
       } else if (sec === "話してよいこと" && kv && kv[1] === "住んでいる地域") {
         regionSet(kv[2]);
       } else if (sec === "話してよいこと" && kv && kv[2]) {
@@ -518,7 +504,6 @@ footer { color: var(--soft); font-size: 13px; text-align: center; margin-top: 22
     $("mimic").value = buf["ものまね用メモ"].join("\n").trim();
     $("banned").value = buf["絶対に出さない言葉"].join("\n");
     $("interests").value = buf["話してよい趣味や好み"].join("\n");
-    $("avoid").value = buf["伝えたくない話題"].join("\n");
     showName(); go(1);
   });
 
@@ -546,10 +531,7 @@ footer { color: var(--soft); font-size: 13px; text-align: center; margin-top: 22
     if (title === "あなたについて" && radio("region") && !regionGet()) {
       fieldErr("region", ["どこまで伝えるかを、下の一覧から選んでください。"]); return;
     }
-    if (title === "趣味や好みの話") {
-      if (!radio("imode")) { fieldErr("imode", ["3つのうち、どれかを選んでください。"]); return; }
-      if (radio("imode") === "書いたことだけ" && !checkField("interests")) return;
-    }
+    if (title === "趣味と近況" && !checkField("interests")) return;
     if (title === "名乗り") {
       var bad = false;
       if (!keyText($("house").value)) { fieldErr("house", ["呼び名を書いてください。"]); bad = true; }
