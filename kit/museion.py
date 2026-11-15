@@ -54,7 +54,7 @@ FORM_START = "【ムーセイオン フォーム ここから】"
 FORM_END = "【ムーセイオン フォーム ここまで】"
 FORM_MARKS = [(FORM_START, FORM_END), ("[Mouseion form: start]", "[Mouseion form: end]")]
 F_RULES = "部屋の約束.md"
-KIT_VERSION = "2026.11.15-4"     # 道具一式の版。中身を変えたら上げる
+KIT_VERSION = "2026.11.15-5"     # 道具一式の版。中身を変えたら上げる
 F_CARD = "名刺.md"
 D_BOOK = "名刺帳"
 CARD_THEMES = ["生成り", "夜空", "桜", "森"]
@@ -1274,20 +1274,55 @@ def receive_cards(home, room, msgs):
     return notes
 
 
+F_PROMPT = "構築プロンプト.md"
+KIT_FILES = ["museion.py", "手順書.md", "フォームひな形.md", F_RULES, "名刺ひな形.md"]   # どの家も受け取るもの
+KIT_OPTIONAL = ["firestore.rules", F_PROMPT]                                            # 無くてもよいもの
+
+
 def cmd_version(args):
+    """道具一式の版と指紋を表示する。版.json があれば照らし合わせる。
+    一致しなければ、最後の行でそう知らせ、終了コード1で終わる。"""
     kit = Path(__file__).resolve().parent
-    files = ["museion.py", "firestore.rules", F_RULES, "手順書.md", "フォームひな形.md"]
-    info = {"版": KIT_VERSION, "約束の版": kit_rules_version(),
-            "指紋": {n: hashlib.sha256((kit / n).read_bytes()).hexdigest() for n in files if (kit / n).exists()}}
-    text = json.dumps(info, ensure_ascii=False, indent=2)
+    fp = lambda n: hashlib.sha256((kit / n).read_bytes()).hexdigest()
+    have = {n: fp(n) for n in KIT_FILES + KIT_OPTIONAL if (kit / n).exists()}
+    pm = re.search(r"【この文章の版】\s*([0-9.]+)", (kit / F_PROMPT).read_text(encoding="utf-8")) if (kit / F_PROMPT).exists() else None
+    pub_f = kit / "版.json"
     if args.file == "書き出す":
-        (kit / "版.json").write_text(text + "\n", encoding="utf-8")
+        missing = [n for n in KIT_FILES + KIT_OPTIONAL if n not in have]
+        if missing:
+            raise Stop("版.json を書き出すには、全部のファイルが要ります。足りないもの：" + "、".join(missing))
+        info = {"版": KIT_VERSION, "約束の版": kit_rules_version(), "構築プロンプトの版": pm.group(1) if pm else None,
+                "指紋": have}
+        pub_f.write_text(json.dumps(info, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        print(json.dumps(info, ensure_ascii=False, indent=2))
         print("版.json を書き出しました。")
-    print(text)
-    pub = kit / "版.json"
-    if args.file != "書き出す" and pub.exists():
-        same = json.loads(pub.read_text(encoding="utf-8")) == info
-        print("版.json と" + ("一致しています。" if same else "**一致しません。** 受け取りの途中で中身が変わったか、版.json が古いままです。"))
+        return
+    print(f"道具一式の版：{KIT_VERSION}　／　部屋の約束の版：{kit_rules_version()}")
+    for n, h in have.items():
+        print(f"  {h}  {n}")
+    if not pub_f.exists():
+        print("版.json がありません。照らし合わせていません。")
+        return
+    pub = json.loads(pub_f.read_text(encoding="utf-8"))
+    bad = []
+    if pub.get("版") != KIT_VERSION:
+        bad.append(f"版がちがいます（版.json は {pub.get('版')}、手元の museion.py は {KIT_VERSION}）")
+    for n, h in pub.get("指紋", {}).items():
+        if n not in have:
+            if n in KIT_OPTIONAL:
+                print(f"  （{n} は手元にありません。無くてかまいません）")
+            else:
+                bad.append(f"{n} が手元にありません")
+        elif have[n] != h:
+            bad.append(f"{n} の中身が、版.json とちがいます")
+    for n in KIT_FILES:
+        if n not in pub.get("指紋", {}):
+            bad.append(f"{n} の指紋が、版.json に載っていません")
+    if bad:
+        print("\n".join("  - " + b for b in bad))
+        print("版.json と**一致しません。** 受け取りの途中で中身が変わったか、版.json が古いままです。")
+        sys.exit(1)
+    print("版.json と一致しています。")
 
 
 def cmd_log(args):
