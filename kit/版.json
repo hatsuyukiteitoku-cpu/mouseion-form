@@ -1,14 +1,14 @@
 {
-  "版": "2026.11.15-6",
+  "版": "2026.11.15-7",
   "約束の版": 1,
-  "構築プロンプトの版": "0.7",
+  "構築プロンプトの版": "0.8",
   "指紋": {
-    "museion.py": "ac7b6977c48f3c2387449d22973fbc1367fc16459300ff78e1bc6abadcb845e7",
-    "手順書.md": "1f36c52b3f8f10e50708dc6d62d1e1a3b48684a2a5fd0218c2db20161feb1b04",
+    "museion.py": "4092dd99091328cdefb07d67b9b16bba10efc79bcdd57f25ed6c05b70b15ad87",
+    "手順書.md": "cc2798498bbd73b6f10177f600a7702c7f7c74e9af68280848b20acd1d3e2c51",
     "フォームひな形.md": "c52318f936cf410f673c14cc6b08ca202c72718eeac24ff9d34ea27bc3866a13",
     "部屋の約束.md": "10c0badbd1a406da922cd6f195d382373232975c0ed9d02ed320f9be820d7249",
     "名刺ひな形.md": "a14cc61de97358d3104ff3e504f2cea067fc1324047835fe2b5d90430efb29d0",
     "firestore.rules": "e47d7f76c339e4420b361534c7036c9ba2581c94e8162bdce0e81bfc74c80406",
-    "構築プロンプト.md": "f625094147012d596780845da82a41a55f7dc6087f4af76f11926bbe1bdb99b1"
+    "構築プロンプト.md": "f34e3ef37204bb64af13ae1aaf81ff0c422f8a36105733c873b71f9f4b3a1918"
   }
 }

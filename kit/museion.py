@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """ムーセイオン 道具本体（AIを使わない、通信と検査の係）
 
-使い方:  python3 museion.py <命令> [--home 家フォルダ]
+使い方:  python3 museion.py <命令> --home 家フォルダ
+         （--home は必ず書く。書かないと止まる。selftest・version・invite だけは要らない）
 
   invite   （管理者側）招待状のテキストを作る
   join     招待状のテキストを取り込み、家フォルダと鍵ファイルを作る
@@ -13,6 +14,7 @@
   card     自分の名刺（家フォルダの 名刺.md）を検査して部屋に置く。「card 消す」で部屋から下げる
   book     名刺帳（受け取った名刺）の一覧と整理。「book 保護 名前」「book しまう 名前」など
   version  道具一式の版と、各ファイルの指紋を表示する（「version 書き出す」で 版.json を作る）
+  where    いまどの家フォルダ・どの部屋で動くのかを表示する（通信はしない）
   outing   フォームから「お出かけ用ファイル」を作る
   recv     部屋の新着を「受信箱」に写す（全文の写しと、期限切れの掃除もする）
   check    「送信待ち」を検査するだけ（送らない）
@@ -54,7 +56,7 @@ FORM_START = "【ムーセイオン フォーム ここから】"
 FORM_END = "【ムーセイオン フォーム ここまで】"
 FORM_MARKS = [(FORM_START, FORM_END), ("[Mouseion form: start]", "[Mouseion form: end]")]
 F_RULES = "部屋の約束.md"
-KIT_VERSION = "2026.11.15-6"     # 道具一式の版。中身を変えたら上げる
+KIT_VERSION = "2026.11.15-7"     # 道具一式の版。中身を変えたら上げる
 F_CARD = "名刺.md"
 D_BOOK = "名刺帳"
 CARD_THEMES = ["生成り", "夜空", "桜", "森"]
@@ -1726,25 +1728,82 @@ def cmd_selftest(home, args):
         "フォームの指紋：持ち出す中身が変われば変わり、出さない言葉を足しても変わらない"))
     sof = b"\xff\xd8\xff\xc0\x00\x11\x08" + (200).to_bytes(2, "big") + (256).to_bytes(2, "big") + b"\x03" + b"\x00" * 9 + b"\xff\xd9"
     r.append(ok(jpeg_size(sof) == (256, 200) and jpeg_size(b"GIF89a....") is None, "写真の形式と大きさの読み取り"))
+    ns = argparse.Namespace
+    try:
+        show_where(ns(command="recv", home=None, expect_room=None), out=lambda *_: None)
+        r.append(ok(False, "--home を書き忘れたら、何もせずに止まる"))
+    except Stop:
+        r.append(ok(True, "--home を書き忘れたら、何もせずに止まる"))
+    try:
+        show_where(ns(command="selftest", home=None, expect_room=None), out=lambda *_: None)
+        r.append(ok(True, "selftest・version・invite は、--home が無くても動く"))
+    except Stop:
+        r.append(ok(False, "selftest・version・invite は、--home が無くても動く"))
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmpd:
+        (Path(tmpd) / F_KEY).write_text(json.dumps({"room_id": "honban"}), encoding="utf-8")
+        seen = []
+        show_where(ns(command="send", home=tmpd, expect_room="honban"), out=seen.append)
+        good = "部屋：honban" in seen[0] and "家フォルダ：" in seen[0]
+        try:
+            show_where(ns(command="send", home=tmpd, expect_room="keiko"), out=lambda *_: None)
+            good = False
+        except Stop:
+            pass
+        r.append(ok(good, "最初に家フォルダと部屋を表示し、動かしたい部屋とちがえば止まる"))
     print("自己点検：" + ("全部合格" if all(r) else "不合格あり"))
     if not all(r):
         sys.exit(1)
 
 
+NO_HOME = ("selftest", "version", "invite")     # 家フォルダを使わない命令
+
+
+def show_where(args, out=print):
+    """どの家フォルダ・どの部屋で動くのかを、最初に必ず表示する。
+    --home が無ければ止まる。--expect-room が鍵の部屋とちがっても止まる。"""
+    if args.command in NO_HOME:
+        return
+    if not args.home:
+        raise Stop("--home がありません。どの家フォルダで動かすのかを、必ず書いてください"
+                   "（例：python3 museion.py " + args.command + " --home ~/museion-home）。"
+                   "書き忘れたまま別の家で動くのを防ぐため、既定の場所はありません。何もしていません。")
+    home = Path(args.home).expanduser().resolve()
+    room = name = None
+    key = home / F_KEY
+    if key.exists():
+        try:
+            room = json.loads(key.read_text(encoding="utf-8")).get("room_id")
+        except ValueError:
+            pass
+    if (home / F_FORM).exists():
+        f = Form((home / F_FORM).read_text(encoding="utf-8"))
+        name = f.display if f.house and f.muse else None
+    out(f"【家フォルダ：{home}　／　部屋：{room or '（鍵がまだありません）'}　／　名乗り：{name or '（フォームがまだありません）'}】")
+    if args.expect_room and args.expect_room != room:
+        raise Stop(f"動かしたい部屋は「{args.expect_room}」ですが、この家フォルダの鍵は「{room}」の部屋のものです。"
+                   "家フォルダの指定をまちがえていないか確かめてください。何もしていません。")
+
+
 def main():
     ap = argparse.ArgumentParser(description="ムーセイオン 道具本体")
     ap.add_argument("command", choices=["invite", "join", "form", "theme", "topics", "log", "declare", "card", "book",
-                                        "version", "outing", "recv", "check", "send", "release", "selftest"])
+                                        "version", "where", "outing", "recv", "check", "send", "release", "selftest"])
     ap.add_argument("file", nargs="?",
                     help="release：保留ファイル / join：招待状の文章 / form：フォームの文章"
                          "（join と form は、文章を書いたファイルの場所でもよい。省くと標準入力から読む）")
     ap.add_argument("more", nargs="*", help="book 用（名前など）")
     for opt in ("--project", "--api-key", "--room", "--email", "--password"):
         ap.add_argument(opt, help="invite 用")
-    ap.add_argument("--home", default=os.environ.get("MUSEION_HOME", "~/museion-home"),
-                    help="家フォルダ（既定：~/museion-home）")
+    ap.add_argument("--home", default=None,
+                    help="家フォルダ。必ず書く（既定の場所は無い。書き忘れて別の家で動くのを防ぐため）")
+    ap.add_argument("--expect-room", default=None,
+                    help="動かしたい部屋の名前。鍵の部屋とちがっていたら、何もせずに止まる")
     args = ap.parse_args()
     try:
+        show_where(args)
+        if args.command == "where":
+            return
         if args.command == "selftest":
             return cmd_selftest(None, args)
         if args.command == "invite":
