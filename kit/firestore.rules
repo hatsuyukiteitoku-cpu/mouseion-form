@@ -101,14 +101,15 @@ service cloud.firestore {
       allow create, update: if isWriter(roomId)
         && request.auth.uid == uid
         && declared(roomId)
-        && request.resource.data.keys().hasOnly(['name', 'likes', 'foods', 'intro', 'about', 'keywords', 'theme', 'photo', 'updatedAt'])
-        && request.resource.data.keys().hasAll(['name', 'likes', 'foods', 'intro', 'about', 'keywords', 'theme', 'photo', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['name', 'likes', 'foods', 'intro', 'about', 'keywords', 'theme', 'photo', 'wishes', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['name', 'likes', 'foods', 'intro', 'about', 'keywords', 'theme', 'photo', 'wishes', 'updatedAt'])
         && goodName(request.resource.data.name)
         && shortList(request.resource.data.likes, 5, 104)
         && shortList(request.resource.data.foods, 3, 62)
         && shortList(request.resource.data.keywords, 20, 619)
         && shortText(request.resource.data.intro, 100)
         && shortText(request.resource.data.about, 300)
+        && shortText(request.resource.data.wishes, 200)
         && request.resource.data.theme in ['生成り', '夜空', '桜', '森']
         && request.resource.data.photo is string
         && request.resource.data.photo.size() <= 90000
