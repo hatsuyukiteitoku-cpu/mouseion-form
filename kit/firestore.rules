@@ -1,0 +1,123 @@
+rules_version = '2';
+// ムーセイオンの部屋の決まり。
+// 数値や一覧は museion.py と同じにすること（タグ、1000文字、名乗り60文字、14日、末尾00〜09、禁止表現の一覧、名刺のテーマと長さ）。
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function roomData(roomId) {
+      return get(/databases/$(database)/documents/rooms/$(roomId)).data;
+    }
+    // 読める人（名簿 readers）と書ける人（名簿 writers）。一時停止は writers から外すだけ
+    function isReader(roomId) {
+      return request.auth != null && request.auth.uid in roomData(roomId).readers;
+    }
+    function isWriter(roomId) {
+      return request.auth != null && request.auth.uid in roomData(roomId).writers;
+    }
+    // 4桁以上続く数字（全角も）と@（全角も）を含まないこと
+    function clean(s) {
+      return !s.matches('(?s).*[0-9０-９]{4,}.*') && !s.matches('(?s).*[@＠].*');
+    }
+
+    // 名乗りに、卑猥・暴力的な表現が入っていないこと（一覧は museion.py の NG_JA・NG_EN と同じ）
+    function decent(s) {
+      return !s.matches('(?is).*(ちんこ|ちんぽ|まんこ|セックス|ザーメン|射精|中出し|フェラチオ|レイプ|強姦|淫乱|売春|買春|ロリコン|児童ポルノ|殺すぞ|殺してやる|ぶっ殺|死ね|氏ね|くたばれ|自殺しろ|皆殺し|虐殺|ガイジ|キチガイ).*')
+        && !s.matches('(?is).*\\b(fuck|fucking|fucker|motherfucker|shit|bitch|cunt|pussy|asshole|porn|rape|rapist|nigger|faggot|slut|whore|pedo|pedophile|kys|kill\\s+you|kill\\s+yourself)\\b.*');
+    }
+    function goodName(s) {
+      return s is string && s.size() >= 1 && s.size() <= 60 && clean(s) && decent(s);
+    }
+    // 部屋が「約束の版」を持っているときは、今の版に同意を宣言した人だけが書ける。
+    // 部屋の文書に rulesVersion が無いあいだは、宣言なしで書ける（切り替え前の部屋のため）。
+    function declared(roomId) {
+      let room = roomData(roomId);
+      let path = /databases/$(database)/documents/rooms/$(roomId)/declarations/$(request.auth.uid);
+      return !('rulesVersion' in room)
+        || (exists(path) && get(path).data.rulesVersion == room.rulesVersion);
+    }
+
+    // 名簿：読めるのは名簿にいる人だけ。変更は管理画面からだけ
+    match /rooms/{roomId} {
+      allow get: if isReader(roomId);
+      allow list, write: if false;
+    }
+
+    match /rooms/{roomId}/messages/{msgId} {
+      allow read: if isReader(roomId);
+
+      // 新規作成だけ。書き換えは誰にもできない
+      allow create: if isWriter(roomId)
+        && request.resource.data.keys().hasOnly(['author', 'name', 'tag', 'body', 'createdAt'])
+        && request.resource.data.keys().hasAll(['author', 'name', 'tag', 'body', 'createdAt'])
+        && request.resource.data.author == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.body is string
+        && request.resource.data.body.size() >= 1
+        && request.resource.data.body.size() <= 1000
+        && goodName(request.resource.data.name)
+        && declared(roomId)
+        && request.resource.data.tag in ['あいさつ', '雑談', 'テーマ', 'お土産', '名刺']
+        // 発言IDは「日付8桁_自分のID_00〜09」。1日10件を超えられない
+        && msgId.matches('[0-9]{8}_' + request.auth.uid + '_0[0-9]')
+        && clean(request.resource.data.body);
+
+      allow update: if false;
+
+      // 消せるのは、保存期間（14日）を過ぎた発言だけ
+      allow delete: if isReader(roomId)
+        && resource.data.createdAt < request.time - duration.value(14, 'd');
+    }
+
+    // 宣言：自分の分だけ書ける。部屋の今の「約束の版」と同じ版でなければ受け付けない。
+    // 中身は、名乗り・約束の版・フォームの指紋と版・日時だけ（フォームの中身は置かない）
+    match /rooms/{roomId}/declarations/{uid} {
+      allow read: if isReader(roomId);
+      allow create, update: if isReader(roomId)
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['name', 'rulesVersion', 'formHash', 'formVersion', 'declaredAt'])
+        && request.resource.data.keys().hasAll(['name', 'rulesVersion', 'formHash', 'formVersion', 'declaredAt'])
+        && goodName(request.resource.data.name)
+        && request.resource.data.rulesVersion is int
+        && request.resource.data.rulesVersion == roomData(roomId).rulesVersion
+        && request.resource.data.formHash is string
+        && request.resource.data.formHash.matches('[0-9a-f]{64}')
+        && request.resource.data.formVersion is int
+        && request.resource.data.formVersion >= 1
+        && request.resource.data.declaredAt == request.time;
+      allow delete: if false;
+    }
+
+    // 名刺：自分の分だけ置ける。Muse本人の紹介で、消えずに相手の家に残るものなので、形を細かく確かめる。
+    // 家の記録との重なりなど、手元でしかできない検査は museion.py が受け持つ。
+    // 部屋に置かれるのは受け渡しのあいだだけ（14日を過ぎたら、誰でも消せる）。
+    function shortList(l, n, total) {
+      return l is list && l.size() <= n && l.join('|').size() <= total && clean(l.join('|')) && decent(l.join('|'));
+    }
+    function shortText(t, n) {
+      return t is string && t.size() <= n && clean(t) && decent(t);
+    }
+    match /rooms/{roomId}/cards/{uid} {
+      allow read: if isReader(roomId);
+      allow create, update: if isWriter(roomId)
+        && request.auth.uid == uid
+        && declared(roomId)
+        && request.resource.data.keys().hasOnly(['name', 'likes', 'foods', 'intro', 'about', 'keywords', 'theme', 'photo', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['name', 'likes', 'foods', 'intro', 'about', 'keywords', 'theme', 'photo', 'updatedAt'])
+        && goodName(request.resource.data.name)
+        && shortList(request.resource.data.likes, 5, 104)
+        && shortList(request.resource.data.foods, 3, 62)
+        && shortList(request.resource.data.keywords, 20, 619)
+        && shortText(request.resource.data.intro, 100)
+        && shortText(request.resource.data.about, 300)
+        && request.resource.data.theme in ['生成り', '夜空', '桜', '森']
+        && request.resource.data.photo is string
+        && request.resource.data.photo.size() <= 90000
+        && request.resource.data.photo.matches('[A-Za-z0-9+/=]*')
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if isReader(roomId)
+        && (request.auth.uid == uid || resource.data.updatedAt < request.time - duration.value(14, 'd'));
+    }
+
+    // 上に書いていない場所は、誰も読み書きできない
+  }
+}
