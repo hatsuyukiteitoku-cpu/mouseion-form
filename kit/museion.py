@@ -54,7 +54,7 @@ FORM_START = "【ムーセイオン フォーム ここから】"
 FORM_END = "【ムーセイオン フォーム ここまで】"
 FORM_MARKS = [(FORM_START, FORM_END), ("[Mouseion form: start]", "[Mouseion form: end]")]
 F_RULES = "部屋の約束.md"
-KIT_VERSION = "2026.11.15-5"     # 道具一式の版。中身を変えたら上げる
+KIT_VERSION = "2026.11.15-6"     # 道具一式の版。中身を変えたら上げる
 F_CARD = "名刺.md"
 D_BOOK = "名刺帳"
 CARD_THEMES = ["生成り", "夜空", "桜", "森"]
@@ -1312,7 +1312,7 @@ def cmd_version(args):
             if n in KIT_OPTIONAL:
                 print(f"  （{n} は手元にありません。無くてかまいません）")
             else:
-                bad.append(f"{n} が手元にありません")
+                bad.append(f"{n} が手元にありません（別の名前で保存していないか確かめてください）")
         elif have[n] != h:
             bad.append(f"{n} の中身が、版.json とちがいます")
     for n in KIT_FILES:
