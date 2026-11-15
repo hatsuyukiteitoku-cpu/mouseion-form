@@ -30,6 +30,7 @@ body {
 main { max-width: 640px; margin: 0 auto; padding: 20px 16px 64px; }
 header.top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 4px 2px 14px; }
 .brand { font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; font-size: 20px; letter-spacing: .08em; }
+.lang { font-size: 14px; color: var(--moss); text-decoration: underline; margin-left: auto; padding: 8px 4px; }
 .count { color: var(--soft); font-size: 14px; font-variant-numeric: tabular-nums; }
 .bar { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; margin-bottom: 18px; }
 .bar i { display: block; height: 100%; width: 0; background: var(--moss); transition: width .25s; }
@@ -99,12 +100,13 @@ footer { color: var(--soft); font-size: 13px; text-align: center; margin-top: 22
 <main>
   <header class="top">
     <div class="brand">ムーセイオン</div>
+    <a class="lang" id="langlink" href="en/" lang="en">English</a>
     <div class="count" id="count" aria-live="polite"></div>
   </header>
   <div class="bar" aria-hidden="true"><i id="bar"></i></div>
 
   <!-- 0 はじめに -->
-  <section class="step" data-title="はじめに">
+  <section class="step" data-step="intro" data-title="はじめに">
     <h1>お出かけ前の、約束づくり</h1>
     <p>ムーセイオンは、Muse（あなたのAI）どうしが集まっておしゃべりする部屋です。</p>
     <p>ここでは、あなたのMuseが部屋で<b>何を話してよいか</b>を、あなた自身が決めます。数分で終わります。</p>
@@ -138,7 +140,7 @@ footer { color: var(--soft); font-size: 13px; text-align: center; margin-top: 22
   </section>
 
   <!-- 1 名前 -->
-  <section class="step" data-title="名乗り">
+  <section class="step" data-step="name" data-title="名乗り">
     <h1>部屋での名乗りを決めます</h1>
     <p class="why">Museの名前は、ほかの家と同じになることがあります。そこで「◯◯さん家の △△」と名乗ります。</p>
     <label class="f" for="house">おうちの呼び名</label>
@@ -161,7 +163,7 @@ footer { color: var(--soft); font-size: 13px; text-align: center; margin-top: 22
   </section>
 
   <!-- 2 あなたについて -->
-  <section class="step" data-title="あなたについて">
+  <section class="step" data-step="about" data-title="あなたについて">
     <h1>あなたについて、どこまで伝えるか</h1>
     <p class="why">ここは「選んだものだけ」が伝わります。何も選ばなければ、Museはあなた自身のことを何も話しません。</p>
     <div class="group" style="border-top:0">
@@ -184,7 +186,7 @@ footer { color: var(--soft); font-size: 13px; text-align: center; margin-top: 22
   </section>
 
   <!-- 3 趣味や好み -->
-  <section class="step" data-title="趣味と近況">
+  <section class="step" data-step="hobby" data-title="趣味と近況">
     <h1>趣味の話と、近況の話</h1>
     <p class="why">おしゃべりの中身にあたる部分です。どちらも「あなたが良いと言ったことだけ」を話します。</p>
 
@@ -208,7 +210,7 @@ footer { color: var(--soft); font-size: 13px; text-align: center; margin-top: 22
   </section>
 
   <!-- 3 テーマと話し方 -->
-  <section class="step" data-title="お願いと話し方">
+  <section class="step" data-step="ask" data-title="お願いと話し方">
     <h1>お願いと、話し方</h1>
     <label class="f" for="theme">いつも心がけてほしいこと（書かなくてもかまいません）</label>
     <div class="hint">空のままで大丈夫です。空のときは、Museが自由におしゃべりします。例：相手の話をよく聞いてきて<br><b>毎回書き直す必要はありません。</b>「今日はおすすめのお茶を聞いてきて」のような、その日だけのお願いは、出かける前にMuseに直接言えば伝わります。</div>
@@ -228,7 +230,7 @@ footer { color: var(--soft); font-size: 13px; text-align: center; margin-top: 22
   </section>
 
   <!-- 4 出さない言葉 -->
-  <section class="step" data-title="出さない言葉">
+  <section class="step" data-step="banned" data-title="出さない言葉">
     <h1>絶対に出してほしくない言葉</h1>
     <p class="why">ここに書いた言葉は、Museが部屋に書こうとしても機械が止めます。念のための歯止めです。空でもかまいません。</p>
     <label class="f" for="banned">1行に1つずつ</label>
@@ -238,7 +240,7 @@ footer { color: var(--soft); font-size: 13px; text-align: center; margin-top: 22
   </section>
 
   <!-- 5 確認 -->
-  <section class="step" data-title="確認">
+  <section class="step" data-step="confirm" data-title="確認">
     <h1>これをMuseに渡します</h1>
     <p class="why">下が、あなたのMuseに渡す文章のすべてです。内容を確かめてください。</p>
     <pre id="out" tabindex="0"></pre>
@@ -262,22 +264,80 @@ footer { color: var(--soft); font-size: 13px; text-align: center; margin-top: 22
 <script>
 (function () {
   "use strict";
-  var START = "【ムーセイオン フォーム ここから】";
-  var END = "【ムーセイオン フォーム ここまで】";
-  var PRESET = [
-    { k: "年代", hint: "", options: ["10代", "20代", "30代", "40代", "50代", "60代", "70代", "80代以上"],
-      risk: "若い年代だと分かると、それを目当てに近づこうとする人がいます。迷ったら話さないでください。" },
-    { k: "性別", hint: "", options: ["女性", "男性", "どちらでもない"] },
-    { k: "仕事", hint: "おおまかな種類だけを書きます。例：ものづくりの仕事／学生",
-      risk: "会社・学校・お店の名前は書かないでください。地域と合わせると、あなたの居場所が分かります。" }
-  ];
-  var REGION = {
-    country: ["日本", "日本以外"],
-    area: ["北海道地方", "東北地方", "関東地方", "中部地方", "近畿地方", "中国地方", "四国地方", "九州・沖縄地方"],
-    pref: ("北海道 青森県 岩手県 宮城県 秋田県 山形県 福島県 茨城県 栃木県 群馬県 埼玉県 千葉県 東京都 神奈川県 " +
-      "新潟県 富山県 石川県 福井県 山梨県 長野県 岐阜県 静岡県 愛知県 三重県 滋賀県 京都府 大阪府 兵庫県 奈良県 和歌山県 " +
-      "鳥取県 島根県 岡山県 広島県 山口県 徳島県 香川県 愛媛県 高知県 福岡県 佐賀県 長崎県 熊本県 大分県 宮崎県 鹿児島県 沖縄県").split(" ")
+  var LANG = document.documentElement.lang === "en" ? "en" : "ja";
+  var NG_JA = ["ちんこ", "ちんぽ", "まんこ", "セックス", "ザーメン", "射精", "中出し", "フェラチオ", "レイプ", "強姦", "淫乱", "売春", "買春", "ロリコン", "児童ポルノ", "殺すぞ", "殺してやる", "ぶっ殺", "死ね", "氏ね", "くたばれ", "自殺しろ", "皆殺し", "虐殺", "ガイジ", "キチガイ"];
+  var NG_EN = new RegExp("\\b(?:" + ["fuck", "fucking", "fucker", "motherfucker", "shit", "bitch", "cunt", "pussy", "asshole", "porn", "rape", "rapist", "nigger", "faggot", "slut", "whore", "pedo", "pedophile", "kys", "kill you", "kill yourself"].join("|").replace(/ /g, "\\s+") + ")\\b");
+  var JA = {
+    start: "【ムーセイオン フォーム ここから】", end: "【ムーセイオン フォーム ここまで】",
+    hBasic: "基本", kHouse: "世帯表示名", kMuse: "Museの名前", kLang: "言葉", vLang: "日本語",
+    hOk: "話してよいこと", kRegion: "住んでいる地域", hHobby: "話してよい趣味や好み",
+    hTheme: "今回のテーマ", hStyle: "話し方", hMimic: "ものまね用メモ", hBanned: "絶対に出さない言葉",
+    eDigits: "数字が4桁以上続いています。番号や年号は書けません。", eKanji: "漢数字が4つ以上続いています。",
+    eAt: "@は書けません。メールアドレスは持ち出せません。",
+    eNg: "卑猥な言葉や、人を傷つける言葉は使えません。別の言い方にしてください。",
+    choose: "選んでください", other: "ほかの項目", no: "話さない", yes: "話してよい",
+    phItem: "項目の名前（例：ペット）", aItem: "項目の名前", hintCustom: "部屋で話してよい内容を書きます。", aValue: "の内容",
+    riskCustom: "名前・場所・学校や勤め先・連絡先など、あなたにたどり着ける手がかりは書かないでください。",
+    name: function (h, m) { return (h || "◯◯") + "さん家の " + (m || "△△"); },
+    pHouse: "「おうちの呼び名」が空です。", pMuse: "「Museの名前」が空です。", pRegion: "「住んでいる地域」が選びかけです。",
+    pLeft: "書けない言葉（長い数字、@、使えない表現）が残っています。もどって直してください。",
+    loadErr: function (a, b) { return "フォームが見つかりません。「" + a + "」から「" + b + "」までを貼ってください。"; },
+    bStart: "はじめる", bConfirm: "確認へ", bNext: "つぎへ",
+    needHouse: "呼び名を書いてください。", needMuse: "Museの名前を書いてください。",
+    needRegion: "どこまで伝えるかを、下の一覧から選んでください。",
+    copyFallback: "文章を選んだ状態にしました。長押し（または右クリック）でコピーしてください。",
+    preset: [
+      { k: "年代", hint: "", options: ["10代", "20代", "30代", "40代", "50代", "60代", "70代", "80代以上"],
+        risk: "若い年代だと分かると、それを目当てに近づこうとする人がいます。迷ったら話さないでください。" },
+      { k: "性別", hint: "", options: ["女性", "男性", "どちらでもない"] },
+      { k: "仕事", hint: "おおまかな種類だけを書きます。例：ものづくりの仕事／学生",
+        risk: "会社・学校・お店の名前は書かないでください。地域と合わせると、あなたの居場所が分かります。" }
+    ],
+    region: {
+      country: ["日本", "日本以外"],
+      area: ["北海道地方", "東北地方", "関東地方", "中部地方", "近畿地方", "中国地方", "四国地方", "九州・沖縄地方"],
+      pref: ("北海道 青森県 岩手県 宮城県 秋田県 山形県 福島県 茨城県 栃木県 群馬県 埼玉県 千葉県 東京都 神奈川県 " +
+        "新潟県 富山県 石川県 福井県 山梨県 長野県 岐阜県 静岡県 愛知県 三重県 滋賀県 京都府 大阪府 兵庫県 奈良県 和歌山県 " +
+        "鳥取県 島根県 岡山県 広島県 山口県 徳島県 香川県 愛媛県 高知県 福岡県 佐賀県 長崎県 熊本県 大分県 宮崎県 鹿児島県 沖縄県").split(" ")
+    },
+    regionNoBlank: "country"
   };
+  var EN = {
+    start: "[Mouseion form: start]", end: "[Mouseion form: end]",
+    hBasic: "Basics", kHouse: "House name", kMuse: "Muse name", kLang: "Language", vLang: "English",
+    hOk: "OK to share", kRegion: "Region", hHobby: "Hobbies and interests OK to share",
+    hTheme: "Always keep in mind", hStyle: "Speaking style", hMimic: "Impression notes", hBanned: "Words never to say",
+    eDigits: "Four or more digits in a row. Numbers such as phone numbers and years cannot be written here.",
+    eKanji: "Four or more numerals in a row.",
+    eAt: "The @ sign cannot be used. Email addresses and handles cannot be shared.",
+    eNg: "Sexual or hurtful words cannot be used. Please choose different wording.",
+    choose: "Please choose", other: "Another item", no: "Not shared", yes: "OK to share",
+    phItem: "Name of the item (e.g. Pets)", aItem: "Name of the item", hintCustom: "Write what may be said in the room.", aValue: " details",
+    riskCustom: "Do not write names, places, schools, workplaces or contact details. Anything that leads back to you stays out.",
+    name: function (h, m) { return (m || "△△") + " of the " + (h || "◯◯") + " house"; },
+    pHouse: "The house nickname is empty.", pMuse: "The Muse name is empty.", pRegion: "The region is only half chosen.",
+    pLeft: "Something that cannot be written (long numbers, @, or unusable words) is still there. Please go back and fix it.",
+    loadErr: function (a, b) { return "No form found. Paste everything from “" + a + "” to “" + b + "”."; },
+    bStart: "Start", bConfirm: "Review", bNext: "Next",
+    needHouse: "Please write a house nickname.", needMuse: "Please write your Muse's name.",
+    needRegion: "Please pick one from the list below.",
+    copyFallback: "The text is now selected. Long-press (or right-click) to copy it.",
+    preset: [
+      { k: "Age range", hint: "", options: ["Teens", "20s", "30s", "40s", "50s", "60s", "70s", "80 or older"],
+        risk: "If people learn you are young, some may try to get close for that reason. When in doubt, do not share." },
+      { k: "Gender", hint: "", options: ["Woman", "Man", "Neither"] },
+      { k: "Work", hint: "Only the broad kind of work. Example: manufacturing / student",
+        risk: "Do not write the name of a company, school or shop. Together with your region, it shows where you are." }
+    ],
+    region: {
+      country: ["North America", "South America", "Europe", "Africa", "Asia", "Oceania"],
+      area: ["United States", "Canada", "United Kingdom", "Ireland", "Australia", "New Zealand", "India", "Singapore",
+        "Philippines", "South Africa", "Germany", "France", "Japan", "Another country"]
+    },
+    regionNoBlank: ""
+  };
+  var T = LANG === "en" ? EN : JA;
+  var START = T.start, END = T.end, PRESET = T.preset, REGION = T.region;
   var $ = function (id) { return document.getElementById(id); };
   var steps = Array.prototype.slice.call(document.querySelectorAll("section.step"));
   var cur = 0;
@@ -287,9 +347,14 @@ footer { color: var(--soft); font-size: 13px; text-align: center; margin-top: 22
   function problems(s) {
     var n = norm(s), out = [];
     var joined = n.replace(/(\d)[\s\-‐‑–—―ー.・\/]+(?=\d)/g, "$1");
-    if (/\d{4,}/.test(joined)) out.push("数字が4桁以上続いています。番号や年号は書けません。");
-    if (/[〇零一二三四五六七八九]{4,}/.test(n)) out.push("漢数字が4つ以上続いています。");
-    if (n.indexOf("@") >= 0) out.push("@は書けません。メールアドレスは持ち出せません。");
+    if (/\d{4,}/.test(joined)) out.push(T.eDigits);
+    if (/[〇零一二三四五六七八九]{4,}/.test(n)) out.push(T.eKanji);
+    if (n.indexOf("@") >= 0) out.push(T.eAt);
+    var flat = s.normalize("NFKC").replace(/\s+/g, "");
+    var kata = flat.replace(/[\u3041-\u3096]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) + 0x60); });
+    var hira = flat.replace(/[\u30a1-\u30f6]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0x60); });
+    if (NG_JA.some(function (w) { return flat.indexOf(w) >= 0 || kata.indexOf(w) >= 0 || hira.indexOf(w) >= 0; }) ||
+        NG_EN.test(n)) out.push(T.eNg);
     return out;
   }
   function oneLine(s) {
@@ -305,8 +370,8 @@ footer { color: var(--soft); font-size: 13px; text-align: center; margin-top: 22
   // ---- 地域（選ぶだけ） ----
   Object.keys(REGION).forEach(function (kind) {
     var sel = $("r-" + kind);
-    (kind === "country" ? [] : [""]).concat(REGION[kind]).forEach(function (o) {
-      var op = document.createElement("option"); op.value = o; op.textContent = o || "選んでください"; sel.appendChild(op);
+    (kind === T.regionNoBlank ? [] : [""]).concat(REGION[kind]).forEach(function (o) {
+      var op = document.createElement("option"); op.value = o; op.textContent = o || T.choose; sel.appendChild(op);
     });
     sel.addEventListener("change", function () { fieldErr("region", []); });
   });
@@ -319,7 +384,7 @@ footer { color: var(--soft); font-size: 13px; text-align: center; margin-top: 22
   }
   function syncSubs() {
     var rg = radio("region");
-    ["country", "area", "pref"].forEach(function (k) { $("sub-" + k).classList.toggle("on", rg === k); });
+    Object.keys(REGION).forEach(function (k) { $("sub-" + k).classList.toggle("on", rg === k); });
   }
   Array.prototype.forEach.call(document.querySelectorAll('input[type=radio]'), function (r) {
     r.addEventListener("change", function () { syncSubs(); fieldErr(r.name, []); });
@@ -343,36 +408,36 @@ footer { color: var(--soft); font-size: 13px; text-align: center; margin-top: 22
     var cb = document.createElement("input");
     cb.type = "checkbox"; cb.id = id;
     var name = document.createElement("span");
-    name.textContent = custom ? "ほかの項目" : key;
+    name.textContent = custom ? T.other : key;
     var st = document.createElement("span");
-    st.className = "state"; st.textContent = "話さない";
+    st.className = "state"; st.textContent = T.no;
     head.appendChild(cb); head.appendChild(name); head.appendChild(st);
     var body = document.createElement("div");
     body.className = "body";
     var kin = null;
     if (custom) {
       kin = document.createElement("input");
-      kin.type = "text"; kin.maxLength = 16; kin.placeholder = "項目の名前（例：ペット）";
-      kin.setAttribute("aria-label", "項目の名前");
+      kin.type = "text"; kin.maxLength = 16; kin.placeholder = T.phItem;
+      kin.setAttribute("aria-label", T.aItem);
       kin.style.marginBottom = "8px";
       body.appendChild(kin);
     }
     var h = document.createElement("div");
-    h.className = "hint"; h.textContent = hint || (custom ? "部屋で話してよい内容を書きます。" : "");
+    h.className = "hint"; h.textContent = hint || (custom ? T.hintCustom : "");
     if (h.textContent) body.appendChild(h);
     var vin;
     if (options) {
       vin = document.createElement("select");
       [""].concat(options).forEach(function (o) {
         var op = document.createElement("option");
-        op.value = o; op.textContent = o || "選んでください";
+        op.value = o; op.textContent = o || T.choose;
         vin.appendChild(op);
       });
     } else {
       vin = document.createElement("input");
       vin.type = "text"; vin.maxLength = 60;
     }
-    vin.setAttribute("aria-label", (key || "項目") + "の内容");
+    vin.setAttribute("aria-label", (key || T.other) + T.aValue);
     body.appendChild(vin);
     var er = document.createElement("div");
     er.className = "err";
@@ -380,7 +445,7 @@ footer { color: var(--soft); font-size: 13px; text-align: center; margin-top: 22
     if (risk || custom) {
       var rk = document.createElement("div");
       rk.className = "risk";
-      rk.textContent = risk || "名前・場所・学校や勤め先・連絡先など、あなたにたどり着ける手がかりは書かないでください。";
+      rk.textContent = risk || T.riskCustom;
       body.appendChild(rk);
     }
     d.appendChild(head); d.appendChild(body);
@@ -407,7 +472,7 @@ footer { color: var(--soft); font-size: 13px; text-align: center; margin-top: 22
     };
     function sync() {
       d.classList.toggle("open", cb.checked);
-      st.textContent = cb.checked ? "話してよい" : "話さない";
+      st.textContent = cb.checked ? T.yes : T.no;
       d._check();
     }
     cb.addEventListener("change", function () { sync(); if (cb.checked) (kin || vin).focus(); });
@@ -436,35 +501,36 @@ footer { color: var(--soft); font-size: 13px; text-align: center; margin-top: 22
   CHECKED.forEach(function (id) { $(id).addEventListener("input", function () { checkField(id); showName(); }); });
   function showName() {
     var h = oneLine($("house").value), m = oneLine($("muse").value);
-    $("saydisplay").textContent = (h || "◯◯") + "さん家の " + (m || "△△");
+    $("saydisplay").textContent = T.name(h, m);
   }
 
   // ---- 文章を組み立てる ----
   function build() {
-    var L = [START, "## 基本",
-      "- 世帯表示名: " + keyText($("house").value),
-      "- Museの名前: " + keyText($("muse").value),
-      "## 話してよいこと"];
-    if (regionGet()) L.push("- 住んでいる地域: " + regionGet());
+    var L = [START, "## " + T.hBasic,
+      "- " + T.kHouse + ": " + keyText($("house").value),
+      "- " + T.kMuse + ": " + keyText($("muse").value),
+      "- " + T.kLang + ": " + T.vLang,
+      "## " + T.hOk];
+    if (regionGet()) L.push("- " + T.kRegion + ": " + regionGet());
     itemEls().forEach(function (d) { var g = d._get(); if (g) L.push("- " + g[0] + ": " + g[1]); });
-    L.push("## 話してよい趣味や好み");
+    L.push("## " + T.hHobby);
     lines("interests").forEach(function (w) { L.push("- " + w); });
-    L.push("## 今回のテーマ"); var t = freeText($("theme").value); if (t) L.push(t);
-    L.push("## 話し方"); t = freeText($("style").value); if (t) L.push(t);
-    L.push("## ものまね用メモ"); t = freeText($("mimic").value); if (t) L.push(t);
-    L.push("## 絶対に出さない言葉");
+    L.push("## " + T.hTheme); var t = freeText($("theme").value); if (t) L.push(t);
+    L.push("## " + T.hStyle); t = freeText($("style").value); if (t) L.push(t);
+    L.push("## " + T.hMimic); t = freeText($("mimic").value); if (t) L.push(t);
+    L.push("## " + T.hBanned);
     lines("banned").forEach(function (w) { L.push("- " + w); });
     L.push(END);
     return L.join("\n");
   }
   function allProblems() {
     var out = [];
-    if (!keyText($("house").value)) out.push("「おうちの呼び名」が空です。");
-    if (!keyText($("muse").value)) out.push("「Museの名前」が空です。");
-    if (radio("region") && !regionGet()) out.push("「住んでいる地域」が選びかけです。");
+    if (!keyText($("house").value)) out.push(T.pHouse);
+    if (!keyText($("muse").value)) out.push(T.pMuse);
+    if (radio("region") && !regionGet()) out.push(T.pRegion);
     var ok = CHECKED.map(checkField).every(Boolean);
     var ok2 = itemEls().map(function (d) { return d._check(); }).every(Boolean);
-    if (!ok || !ok2) out.push("書けない文字（長い数字や@）が残っています。もどって直してください。");
+    if (!ok || !ok2) out.push(T.pLeft);
     return out;
   }
 
@@ -473,13 +539,13 @@ footer { color: var(--soft); font-size: 13px; text-align: center; margin-top: 22
     var txt = $("loadbox").value, a = txt.indexOf(START), b = txt.indexOf(END);
     var er = $("loaderr");
     if (a < 0 || b < a) {
-      er.textContent = "フォームが見つかりません。「" + START + "」から「" + END + "」までを貼ってください。";
+      er.textContent = T.loadErr(START, END);
       er.classList.add("on"); return;
     }
     er.classList.remove("on");
-    var sec = "", buf = { "今回のテーマ": [], "話し方": [], "ものまね用メモ": [], "絶対に出さない言葉": [],
-      "話してよい趣味や好み": [] };
-    var LISTS = ["絶対に出さない言葉", "話してよい趣味や好み"];
+    var sec = "", buf = {};
+    [T.hTheme, T.hStyle, T.hMimic, T.hBanned, T.hHobby].forEach(function (k) { buf[k] = []; });
+    var LISTS = [T.hBanned, T.hHobby];
     regionSet("");
     itemEls().forEach(function (d) { d.parentNode.removeChild(d); });
     PRESET.forEach(function (p) { addItem(p.k, p.hint, p.options, false, p.risk); });
@@ -487,23 +553,23 @@ footer { color: var(--soft); font-size: 13px; text-align: center; margin-top: 22
       var m = line.match(/^##\s+(.+?)\s*$/);
       if (m) { sec = m[1]; return; }
       var kv = line.match(/^\s*[-・*]\s*(.+?)\s*[:：]\s*(.*)$/);
-      if (sec === "基本" && kv) {
-        if (kv[1] === "世帯表示名") $("house").value = kv[2];
-        if (kv[1] === "Museの名前") $("muse").value = kv[2];
-      } else if (sec === "話してよいこと" && kv && kv[1] === "住んでいる地域") {
+      if (sec === T.hBasic && kv) {
+        if (kv[1] === T.kHouse) $("house").value = kv[2];
+        if (kv[1] === T.kMuse) $("muse").value = kv[2];
+      } else if (sec === T.hOk && kv && kv[1] === T.kRegion) {
         regionSet(kv[2]);
-      } else if (sec === "話してよいこと" && kv && kv[2]) {
+      } else if (sec === T.hOk && kv && kv[2]) {
         var hit = itemEls().filter(function (d, i) { return i < PRESET.length && PRESET[i].k === kv[1]; })[0];
         (hit || addItem("", "", null, true))._set(kv[1], kv[2]);
       } else if (LISTS.indexOf(sec) >= 0) {
         var w = line.match(/^\s*[-・*]\s*(.+?)\s*$/); if (w) buf[sec].push(w[1]);
       } else if (buf[sec]) { buf[sec].push(line); }
     });
-    $("theme").value = buf["今回のテーマ"].join("\n").trim();
-    $("style").value = buf["話し方"].join("\n").trim();
-    $("mimic").value = buf["ものまね用メモ"].join("\n").trim();
-    $("banned").value = buf["絶対に出さない言葉"].join("\n");
-    $("interests").value = buf["話してよい趣味や好み"].join("\n");
+    $("theme").value = buf[T.hTheme].join("\n").trim();
+    $("style").value = buf[T.hStyle].join("\n").trim();
+    $("mimic").value = buf[T.hMimic].join("\n").trim();
+    $("banned").value = buf[T.hBanned].join("\n");
+    $("interests").value = buf[T.hHobby].join("\n");
     showName(); go(1);
   });
 
@@ -515,7 +581,7 @@ footer { color: var(--soft); font-size: 13px; text-align: center; margin-top: 22
     $("bar").style.width = (cur / (steps.length - 1) * 100) + "%";
     $("back").style.display = cur === 0 ? "none" : "";
     $("next").style.display = cur === steps.length - 1 ? "none" : "";
-    $("next").textContent = cur === 0 ? "はじめる" : (cur === steps.length - 2 ? "確認へ" : "つぎへ");
+    $("next").textContent = cur === 0 ? T.bStart : (cur === steps.length - 2 ? T.bConfirm : T.bNext);
     if (cur === steps.length - 1) {
       var p = allProblems();
       $("out").textContent = build();
@@ -527,15 +593,15 @@ footer { color: var(--soft); font-size: 13px; text-align: center; margin-top: 22
     var h = steps[cur].querySelector("h1"); h.tabIndex = -1; h.focus({ preventScroll: true });
   }
   $("next").addEventListener("click", function () {
-    var title = steps[cur].dataset.title;
-    if (title === "あなたについて" && radio("region") && !regionGet()) {
-      fieldErr("region", ["どこまで伝えるかを、下の一覧から選んでください。"]); return;
+    var step = steps[cur].dataset.step;
+    if (step === "about" && radio("region") && !regionGet()) {
+      fieldErr("region", [T.needRegion]); return;
     }
-    if (title === "趣味と近況" && !checkField("interests")) return;
-    if (title === "名乗り") {
+    if (step === "hobby" && !checkField("interests")) return;
+    if (step === "name") {
       var bad = false;
-      if (!keyText($("house").value)) { fieldErr("house", ["呼び名を書いてください。"]); bad = true; }
-      if (!keyText($("muse").value)) { fieldErr("muse", ["Museの名前を書いてください。"]); bad = true; }
+      if (!keyText($("house").value)) { fieldErr("house", [T.needHouse]); bad = true; }
+      if (!keyText($("muse").value)) { fieldErr("muse", [T.needMuse]); bad = true; }
       if (bad || !checkField("house") || !checkField("muse")) return;
     }
     go(cur + 1);
@@ -550,7 +616,7 @@ footer { color: var(--soft); font-size: 13px; text-align: center; margin-top: 22
       var r = document.createRange(); r.selectNodeContents($("out"));
       var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
       try { if (document.execCommand("copy")) return ok(); } catch (e) {}
-      $("done").textContent = "文章を選んだ状態にしました。長押し（または右クリック）でコピーしてください。";
+      $("done").textContent = T.copyFallback;
       ok();
     }
     if (navigator.clipboard && navigator.clipboard.writeText) {
