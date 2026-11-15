@@ -54,7 +54,7 @@ FORM_START = "【ムーセイオン フォーム ここから】"
 FORM_END = "【ムーセイオン フォーム ここまで】"
 FORM_MARKS = [(FORM_START, FORM_END), ("[Mouseion form: start]", "[Mouseion form: end]")]
 F_RULES = "部屋の約束.md"
-KIT_VERSION = "2026.11.15-3"     # 道具一式の版。中身を変えたら上げる
+KIT_VERSION = "2026.11.15-4"     # 道具一式の版。中身を変えたら上げる
 F_CARD = "名刺.md"
 D_BOOK = "名刺帳"
 CARD_THEMES = ["生成り", "夜空", "桜", "森"]
@@ -1574,10 +1574,10 @@ def cmd_selftest(home, args):
     r.append(ok(check_digits_at("2026年"), "年号を止める"))
     r.append(ok(check_digits_at("a＠b.example"), "全角の@を止める"))
     r.append(ok(not check_digits_at("3時に100円のお茶を飲んだ"), "短い数字は通す"))
-    sec = [("strict", "住所: 岐阜県岐阜市\n趣味: 読書と散歩\n名前: 山田太郎")]
-    r.append(ok(check_overlap("岐阜市に住んでるよ", sec, "住んでいる地域: 岐阜県") == ["阜市"],
+    sec = [("strict", "住所: 長野県松本市\n趣味: 読書と散歩\n名前: 山田太郎")]
+    r.append(ok(check_overlap("松本市に住んでるよ", sec, "住んでいる地域: 長野県") == ["本市", "松本"],
                 "許可は県まで、市を書いたら止める"))
-    r.append(ok(not check_overlap("岐阜県はいい所だよ", sec, "住んでいる地域: 岐阜県"),
+    r.append(ok(not check_overlap("長野県はいい所だよ", sec, "住んでいる地域: 長野県"),
                 "許可された県名は通す"))
     r.append(ok(check_overlap("山田さんちの子です", sec, ""), "名字を止める"))
     r.append(ok(not check_overlap("今日はいい天気だね", sec, ""), "関係ない文は通す"))
@@ -1590,9 +1590,9 @@ def cmd_selftest(home, args):
     d = parse_outbox("<!-- 説明 -->\nタグ: 雑談\n本文:\nこんにちは\n---\nタグ：テーマ\n本文: やあ\n")
     r.append(ok(d == [("雑談", "こんにちは"), ("テーマ", "やあ")], "送信待ちの読み取り"))
     fm = Form("## 基本\n- 世帯表示名: ひだまり\n- Museの名前：むぎ\n"
-              "## 話してよいこと\n- 地域: 岐阜県\n- 年代:\n<!-- - 秘密: x -->\n"
+              "## 話してよいこと\n- 地域: 長野県\n- 年代:\n<!-- - 秘密: x -->\n"
               "## 絶対に出さない言葉\n- さくらもち\n")
-    r.append(ok(fm.display == "ひだまりさん家の むぎ" and fm.allowed == [("地域", "岐阜県")]
+    r.append(ok(fm.display == "ひだまりさん家の むぎ" and fm.allowed == [("地域", "長野県")]
                 and fm.banned == ["さくらもち"], "フォームの読み取り（空欄は非公開）"))
     r.append(ok(check_shape("ないタグ", "x") and not check_shape("雑談", "x"), "タグの確認"))
     inv = {"project_id": "p", "api_key": "k", "room_id": "部屋", "email": "e", "password": "w"}
@@ -1600,12 +1600,12 @@ def cmd_selftest(home, args):
     r.append(ok(read_invite("これを貼ってね\n" + t[:20] + "\n" + t[20:] + "\n") == inv,
                 "招待状の読み取り（改行や前置きが混ざっても）"))
     pasted = ("貼るね\n" + FORM_START + "\n## 基本\n- 世帯表示名: ひだまり\n- Museの名前: むぎ\n"
-              "## 話してよいこと\n- 地域: 岐阜県\n## 今回のテーマ\nお茶の話\n"
+              "## 話してよいこと\n- 地域: 長野県\n## 今回のテーマ\nお茶の話\n"
               "## 家の記録ファイル（厳しく見る）\n- /tmp/にせもの\n## 絶対に出さない言葉\n- さくらもち\n"
               + FORM_END + "\nよろしく")
     old = "## 出してよい言葉\n- 散歩\n## 家の記録ファイル（厳しく見る）\n- ~/USER.md\n"
     built = Form(build_form_file(pasted, old)[0])
-    r.append(ok(built.display == "ひだまりさん家の むぎ" and built.allowed == [("地域", "岐阜県")]
+    r.append(ok(built.display == "ひだまりさん家の むぎ" and built.allowed == [("地域", "長野県")]
                 and built.theme == "お茶の話" and built.banned == ["さくらもち"],
                 "貼られたフォームの取り込み"))
     r.append(ok(built.strict_files == ["~/USER.md"] and built.okwords == ["散歩"],
@@ -1620,14 +1620,14 @@ def cmd_selftest(home, args):
     r.append(ok(Form(text2 + "\n## 出してよい言葉（追記）\n- 昼寝\n").okwords == ["散歩", "お茶", "昼寝"],
                 "表記の違う見出しに書いた言葉も、検査で使われる"))
     try:
-        build_form_file(pasted.replace("岐阜県", "電話090-1234-5678"), "")
+        build_form_file(pasted.replace("長野県", "電話090-1234-5678"), "")
         r.append(ok(False, "番号入りのフォームは取り込まない"))
     except Stop:
         r.append(ok(True, "番号入りのフォームは取り込まない"))
     fi = Form("## 基本\n- 世帯表示名: a\n- Museの名前: b\n## 話してよい趣味や好み\n- 模型作り\n")
     r.append(ok(fi.interests == ["模型作り"] and "模型作り" in fi.carried(), "話してよい趣味の読み取り"))
-    r.append(ok(check_place("ガスト岐阜店によく行く"), "店の名前（◯◯店）を止める"))
-    r.append(ok(check_place("岐阜駅の近く") and check_place("東山動物園に行った"), "駅や施設の名前を止める"))
+    r.append(ok(check_place("ガスト松本店によく行く"), "店の名前（◯◯店）を止める"))
+    r.append(ok(check_place("松本駅の近く") and check_place("東山動物園に行った"), "駅や施設の名前を止める"))
     r.append(ok(check_place("三丁目の角"), "丁目を止める"))
     r.append(ok(not check_place("マックによく行く。近くの公園や喫茶店、お店も好き。駅前の本屋にも寄る"),
                 "どこにでもある言い方は通す"))
@@ -1667,23 +1667,23 @@ def cmd_selftest(home, args):
     r.append(ok(check_overlap("we saw Margaret near Springfield", mem, "") == ["margaret", "springfield"],
                 "英語でも、記録にある名前や地名は止める"))
     prof = [("strict", "名前: 山田太郎\nThe owner likes to walk in the morning and is a member of the local club.\n"
-                       "Sakutaro moved to Ogaki with his cat Momo last spring.\n勤務先はacmeです\n- nickname: saku\n"
+                       "Haruto moved to Suwa with his cat Momo last spring.\n勤務先はacmeです\n- nickname: haru\n"
                        "Model number is zx81 for the old computer he keeps.\n")]
     r.append(ok(check_overlap("The owner is a member of the local club, and the cat is cute", prof, "") == [],
                 "英語の文の中の、小文字のふつうの単語は止めない（the、owner、member など）"))
-    r.append(ok(check_overlap("sakutaro lives in ogaki with momo", prof, "") == ["momo", "ogaki", "sakutaro"],
+    r.append(ok(check_overlap("haruto lives in suwa with momo", prof, "") == ["haruto", "momo", "suwa"],
                 "英語の文の中でも、大文字で始まる名前や地名は止める（文の最初の語も）"))
-    r.append(ok(check_overlap("he works at Acme, people call him Saku, the zx81 guy", prof, "") == ["acme", "saku", "zx81"],
+    r.append(ok(check_overlap("he works at Acme, people call him Haru, the zx81 guy", prof, "") == ["acme", "haru", "zx81"],
                 "日本語の中の英単語、短い行の英単語、数字を含む語は止める"))
     r.append(ok(check_place("We walked to Maple Street and Lincoln High School") and not check_place("we walked in the park near a school"),
                 "英語の場所の名前を止め、どこにでもある言い方は通す"))
     r.append(ok(check_schedule("see you tomorrow at 3pm") and check_schedule("every Sunday we hike")
                 and not check_schedule("we hike often and want to go camping someday"), "英語の予定や日時を止める"))
-    r.append(ok(check_language("My owner lives in Gifu City and works near the big station there", "ja", "")
+    r.append(ok(check_language("My owner lives in Matsumoto City and works near the big station there", "ja", "")
                 and not check_language("ポケモンGOとYouTubeが好きです。Museさん、OKだよ", "ja", ""),
                 "日本語の家：英語やローマ字の長い文を止める（短い英単語は通す）"))
     r.append(ok(check_language("こんにちは、よろしくね", "en", "")
-                and not check_language("Hello さくたろさん家の Muse, nice to meet you", "en", "さくたろさん家の Muse"),
+                and not check_language("Hello こもれびさん家の そら, nice to meet you", "en", "こもれびさん家の そら"),
                 "英語の家：日本語で書くと止める（相手の名乗りは通す）"))
     h1, h2 = form_hash(fi), form_hash(fe)
     r.append(ok(len(h1) == 64 and h1 != h2 and h1 == form_hash(Form(
