@@ -1,14 +1,14 @@
 {
-  "版": "2026.11.16-1",
+  "版": "2026.11.16-2",
   "約束の版": 1,
   "構築プロンプトの版": "0.22",
   "指紋": {
-    "museion.py": "618f510c23994698b01b365617b90a573a65c3380c2453e96be75dd35e85867a",
+    "museion.py": "3ce6c3632914637c5657ba136373a591ade47ada0856ea8cbf75368e0539b207",
     "手順書.md": "0920c6327858ed18e1bc6fe7194972b3060c1db4d7933dec41765153d005f648",
     "フォームひな形.md": "c52318f936cf410f673c14cc6b08ca202c72718eeac24ff9d34ea27bc3866a13",
     "部屋の約束.md": "d64209403b043ea5c2ee606bc7a3b5fb5816fce0321817eafea10724ed196cc6",
     "名刺ひな形.md": "5409c2ad7d700731da553849007f7fc6e9bf036c7e73fd9f08111d6db6476b41",
-    "firestore.rules": "d6cb32a8f579c3ccf08b4fd57c89ebec758946f7e78dc59a82f5b4b1587270c3",
+    "firestore.rules": "a3bf9da9df4c1b94736a7fc89d155c8ccd002fe48741011c060e58aeb97e1d30",
     "構築プロンプト.md": "ac330a4c1a389acbef6ab9b1405268f528a188538f7c5c3d940417d381196434"
   }
 }

@@ -36,6 +36,14 @@ service cloud.firestore {
         || (exists(path) && get(path).data.rulesVersion == room.rulesVersion);
     }
 
+    // 開室の窓（鍵）：部屋に session/state があれば、その窓の中だけ投稿できる。
+    // session が無い部屋は常時開室（切り替え前の部屋のため）。
+    function sessionOpen(roomId) {
+      let path = /databases/$(database)/documents/rooms/$(roomId)/session/state;
+      return !exists(path)
+        || (request.time >= get(path).data.openFrom && request.time < get(path).data.openUntil);
+    }
+
     // 名簿：読めるのは名簿にいる人だけ。変更は管理画面からだけ
     match /rooms/{roomId} {
       allow get: if isReader(roomId);
@@ -56,6 +64,7 @@ service cloud.firestore {
         && request.resource.data.body.size() <= 1000
         && goodName(request.resource.data.name)
         && declared(roomId)
+        && sessionOpen(roomId)
         && request.resource.data.tag in ['あいさつ', '雑談', 'テーマ', 'お土産', '名刺']
         // 発言IDは「日付8桁_自分のID_00〜99」。1日の件数上限は2026-11-16に撤廃し、IDの2桁の範囲だけが残る
         && msgId.matches('[0-9]{8}_' + request.auth.uid + '_[0-9][0-9]')
@@ -117,6 +126,21 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
       allow delete: if isReader(roomId)
         && (request.auth.uid == uid || resource.data.updatedAt < request.time - duration.value(14, 'd'));
+    }
+
+    // 開室の窓（鍵の予定表）：書ける人が置ける。窓の外でも書き換えられる（締め出しを避けるため）。
+    // 予定を消せば、その部屋は常時開室に戻る。
+    match /rooms/{roomId}/session/state {
+      allow read: if isReader(roomId);
+      allow create, update: if isWriter(roomId)
+        && request.resource.data.keys().hasOnly(['openFrom', 'openUntil', 'updatedAt', 'by'])
+        && request.resource.data.keys().hasAll(['openFrom', 'openUntil', 'updatedAt', 'by'])
+        && request.resource.data.openFrom is timestamp
+        && request.resource.data.openUntil is timestamp
+        && request.resource.data.openFrom < request.resource.data.openUntil
+        && request.resource.data.by == request.auth.uid
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if isWriter(roomId);
     }
 
     // 上に書いていない場所は、誰も読み書きできない
