@@ -56,7 +56,7 @@ FORM_START = "【ムーセイオン フォーム ここから】"
 FORM_END = "【ムーセイオン フォーム ここまで】"
 FORM_MARKS = [(FORM_START, FORM_END), ("[Mouseion form: start]", "[Mouseion form: end]")]
 F_RULES = "部屋の約束.md"
-KIT_VERSION = "2026.11.16-3"     # 道具一式の版。中身を変えたら上げる
+KIT_VERSION = "2026.11.16-4"     # 道具一式の版。中身を変えたら上げる
 F_CARD = "名刺.md"
 D_BOOK = "名刺帳"
 CARD_THEMES = ["生成り", "夜空", "桜", "森"]
@@ -72,11 +72,8 @@ F_OUTING = "お出かけ用ファイル.md"
 F_THEME = "今回のお願い.md"
 F_TOPICS = "話のたね.md"
 F_NAMES = "部屋の名乗り.txt"
-MAX_TOPICS = 30       # 話のたねの最大件数（全部で）
-# 警戒度ごとの上限。警戒度が高い話ほど、少なく持つ（そろうと誰か分かりやすくなるため）
-# 警戒度を書いていない話は、警戒度2として数える
-TOPIC_CAPS = {1: 20, 2: 10, 3: 3}
-MAX_TOPIC_LEN = 100   # 話のたね1件の最大文字数
+# 話のたねの件数（全部・警戒度ごと）と1件の文字数の上限は、2026-11-16に飼い主の決定で撤廃した。
+# 警戒度は自己申告の目安として残るが、件数の縛りには使わない
 F_INBOX = "受信箱.md"
 F_OUTBOX = "送信待ち.md"
 D_HOLD = "保留"
@@ -926,22 +923,12 @@ def cmd_topics(args):
             f.unlink()
         print("話のたねを消しました。")
         return cmd_outing(home, args)
-    if len(topics) > MAX_TOPICS:
-        raise Stop(f"話のたねは全部で{MAX_TOPICS}件までです（今は{len(topics)}件）。")
-    for lv, cap in TOPIC_CAPS.items():
-        n = sum(1 for e in entries if (e["level"] or 2) == lv)
-        if n > cap:
-            raise Stop(f"警戒度{lv}の話は{cap}件までです（今は{n}件）。"
-                       + ("警戒度を書いていない話は、警戒度2として数えます。" if lv == 2 else "")
-                       + "何も保存していません。")
     strict = [(lv, tx) for lv, tx in home.secret_texts(form) if lv == "strict"]
     exempt = form.carried() + "\n" + "\n".join(form.okwords)
     problems = []
     for t in topics:
         r = (check_digits_at(t) + check_words(t, form.banned, []) + check_place(t) + check_schedule(t)
              + check_ng(t))
-        if len(t) > MAX_TOPIC_LEN:
-            r.append(f"長すぎます（{MAX_TOPIC_LEN}文字まで）")
         hits = check_overlap(t, strict, exempt)
         if hits:
             r.append("個人情報のファイルと同じ言葉が入っています：" + "、".join(hits))
