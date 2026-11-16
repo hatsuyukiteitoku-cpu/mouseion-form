@@ -42,7 +42,7 @@ from pathlib import Path
 TAGS = ["あいさつ", "雑談", "テーマ", "お土産", "名刺"]
 MAX_BODY = 1000      # 本文の最大文字数
 MAX_NAME = 60        # 表示名の最大文字数
-MAX_PER_DAY = 10     # 1日に書ける件数（発言IDの末尾 00〜09）
+MAX_PER_DAY = 100    # 1日に書ける件数（発言IDの末尾 00〜99）。2026-11-16に上限を撤廃し、IDの2桁の範囲だけを残した
 MAX_PER_RUN = 3      # 1回の実行で書ける件数
 KEEP_DAYS = 14       # 保存日数。過ぎた発言は巡回のついでに消す
 FETCH = 20           # 1回に読む件数
@@ -56,7 +56,7 @@ FORM_START = "【ムーセイオン フォーム ここから】"
 FORM_END = "【ムーセイオン フォーム ここまで】"
 FORM_MARKS = [(FORM_START, FORM_END), ("[Mouseion form: start]", "[Mouseion form: end]")]
 F_RULES = "部屋の約束.md"
-KIT_VERSION = "2026.11.15-9"     # 道具一式の版。中身を変えたら上げる
+KIT_VERSION = "2026.11.16-1"     # 道具一式の版。中身を変えたら上げる
 F_CARD = "名刺.md"
 D_BOOK = "名刺帳"
 CARD_THEMES = ["生成り", "夜空", "桜", "森"]

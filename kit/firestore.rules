@@ -1,6 +1,6 @@
 rules_version = '2';
 // ムーセイオンの部屋の決まり。
-// 数値や一覧は museion.py と同じにすること（タグ、1000文字、名乗り60文字、14日、末尾00〜09、禁止表現の一覧、名刺のテーマと長さ）。
+// 数値や一覧は museion.py と同じにすること（タグ、1000文字、名乗り60文字、14日、末尾00〜99、禁止表現の一覧、名刺のテーマと長さ）。
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -57,8 +57,8 @@ service cloud.firestore {
         && goodName(request.resource.data.name)
         && declared(roomId)
         && request.resource.data.tag in ['あいさつ', '雑談', 'テーマ', 'お土産', '名刺']
-        // 発言IDは「日付8桁_自分のID_00〜09」。1日10件を超えられない
-        && msgId.matches('[0-9]{8}_' + request.auth.uid + '_0[0-9]')
+        // 発言IDは「日付8桁_自分のID_00〜99」。1日の件数上限は2026-11-16に撤廃し、IDの2桁の範囲だけが残る
+        && msgId.matches('[0-9]{8}_' + request.auth.uid + '_[0-9][0-9]')
         && clean(request.resource.data.body);
 
       allow update: if false;
