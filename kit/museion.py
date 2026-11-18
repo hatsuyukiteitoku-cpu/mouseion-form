@@ -28,11 +28,13 @@ import argparse
 import base64
 import datetime as dt
 import hashlib
+import http.client
 import json
 import os
 import re
 import secrets
 import sys
+import time
 import unicodedata
 import urllib.error
 import urllib.request
@@ -56,7 +58,7 @@ FORM_START = "【ムーセイオン フォーム ここから】"
 FORM_END = "【ムーセイオン フォーム ここまで】"
 FORM_MARKS = [(FORM_START, FORM_END), ("[Mouseion form: start]", "[Mouseion form: end]")]
 F_RULES = "部屋の約束.md"
-KIT_VERSION = "2026.11.16-4"     # 道具一式の版。中身を変えたら上げる
+KIT_VERSION = "2026.11.18-1"     # 道具一式の版。中身を変えたら上げる
 F_CARD = "名刺.md"
 D_BOOK = "名刺帳"
 CARD_THEMES = ["生成り", "夜空", "桜", "森"]
@@ -558,32 +560,48 @@ class Room:
         self.token = None
         self.uid = None
 
-    def http(self, method, url, body=None, auth=True):
+    def http(self, method, url, body=None, auth=True, retries=0):
+        """通信の入口。読み取り専用の呼び出しは retries を付けてよい：
+        応答が途中で切れたら（IncompleteRead など）、少し待って自動で読み直す。
+        書き込み（commit・DELETE・合言葉の付け替え）には付けないこと。応答が
+        切れてもサーバー側では成功していることがあり、自動で繰り返すと
+        二重投稿になりうる。書き込みの成否は、読み直して確認してから判断する。"""
         data = json.dumps(body).encode() if body is not None else None
-        req = urllib.request.Request(url, data=data, method=method)
-        req.add_header("Content-Type", "application/json")
-        if auth:
-            req.add_header("Authorization", "Bearer " + self.token)
-        try:
-            with urllib.request.urlopen(req, timeout=30) as r:
-                raw = r.read()
-                return r.status, (json.loads(raw) if raw.strip() else {})
-        except urllib.error.HTTPError as e:
-            raw = e.read().decode("utf-8", "replace")
+        for attempt in range(retries + 1):
+            req = urllib.request.Request(url, data=data, method=method)
+            req.add_header("Content-Type", "application/json")
+            if auth:
+                req.add_header("Authorization", "Bearer " + self.token)
             try:
-                return e.code, json.loads(raw)
-            except ValueError:
-                return e.code, {"raw": raw}
-        except urllib.error.URLError as e:
-            raise Stop(f"通信できませんでした：{e.reason}\n"
-                       "通信の許可（承認カード）が出ていないか、飼い主に確認してください。")
+                with urllib.request.urlopen(req, timeout=30) as r:
+                    raw = r.read()
+                    return r.status, (json.loads(raw) if raw.strip() else {})
+            except urllib.error.HTTPError as e:
+                try:
+                    raw = e.read().decode("utf-8", "replace")
+                except (http.client.HTTPException, OSError):
+                    raw = ""
+                try:
+                    return e.code, json.loads(raw)
+                except ValueError:
+                    return e.code, {"raw": raw}
+            except (http.client.HTTPException, OSError) as e:
+                # URLError・接続リセット・タイムアウト・IncompleteRead をまとめて受ける
+                if attempt < retries:
+                    time.sleep(2 * (attempt + 1))
+                    continue
+                if isinstance(e, urllib.error.URLError):
+                    raise Stop(f"通信できませんでした：{e.reason}\n"
+                               "通信の許可（承認カード）が出ていないか、飼い主に確認してください。")
+                raise Stop(f"通信が途中で切れました（{type(e).__name__}）。\n"
+                           "少し待ってから、もう一度試してください。")
 
     def login(self):
         url = (f"{self.auth_base}/v1/accounts:signInWithPassword"
                f"?key={self.inv['api_key']}")
         code, res = self.http("POST", url, {
             "email": self.inv["email"], "password": self.inv["password"],
-            "returnSecureToken": True}, auth=False)
+            "returnSecureToken": True}, auth=False, retries=2)
         if code != 200:
             raise Stop(f"ログインできませんでした（{code}）。鍵が失効していないか、管理者側に確認してください。")
         self.token, self.uid = res["idToken"], res["localId"]
@@ -601,7 +619,7 @@ class Room:
 
     def rules_version(self):
         """部屋の約束の版（部屋の文書の rulesVersion）。まだ無ければ None"""
-        code, res = self.http("GET", f"{self.fs_base}/v1/{self.room}")
+        code, res = self.http("GET", f"{self.fs_base}/v1/{self.room}", retries=2)
         if code != 200:
             raise Stop(f"部屋を確認できませんでした（{code}）。名簿に入っているか確認してください。")
         v = res.get("fields", {}).get("rulesVersion", {})
@@ -620,7 +638,8 @@ class Room:
 
     def declarations(self):
         code, res = self.http("POST", self.fs_base + "/v1/" + self.room + ":runQuery",
-                              {"structuredQuery": {"from": [{"collectionId": "declarations"}], "limit": 50}})
+                              {"structuredQuery": {"from": [{"collectionId": "declarations"}], "limit": 50}},
+                              retries=2)
         if code != 200:
             return []
         out = []
@@ -635,7 +654,7 @@ class Room:
 
     def query(self, q):
         code, res = self.http("POST", self.fs_base + "/v1/" + self.room + ":runQuery",
-                              {"structuredQuery": q})
+                              {"structuredQuery": q}, retries=2)
         if code != 200:
             raise Stop(f"部屋を読めませんでした（{code}）。名簿に入っているか確認してください。")
         return [msg_from_doc(r["document"]) for r in res if "document" in r]
@@ -664,7 +683,8 @@ class Room:
 
     def cards(self):
         code, res = self.http("POST", self.fs_base + "/v1/" + self.room + ":runQuery",
-                              {"structuredQuery": {"from": [{"collectionId": "cards"}], "limit": 100}})
+                              {"structuredQuery": {"from": [{"collectionId": "cards"}], "limit": 100}},
+                              retries=2)
         if code != 200:
             return []
         out = []
@@ -706,7 +726,7 @@ class Room:
         day = dt.datetime.now(JST).strftime("%Y%m%d")
         for i in range(MAX_PER_DAY):
             mid = f"{day}_{self.uid}_{i:02d}"
-            code, _ = self.http("GET", f"{self.fs_base}/v1/{self.room}/messages/{mid}")
+            code, _ = self.http("GET", f"{self.fs_base}/v1/{self.room}/messages/{mid}", retries=2)
             if code == 404:
                 return mid
             if code != 200:
